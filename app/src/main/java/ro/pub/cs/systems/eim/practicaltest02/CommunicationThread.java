@@ -14,6 +14,8 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
+import java.util.Date;
+import java.util.Calendar;
 import java.util.HashMap;
 
 public class CommunicationThread extends Thread {
@@ -21,8 +23,7 @@ public class CommunicationThread extends Thread {
     private final ServerThread serverThread;
     private final Socket socket;
 
-    private String city;
-    private String informationType;
+    private String currency;
 
     // Constructor of the thread, which takes a ServerThread and a Socket as parameters
     public CommunicationThread(ServerThread serverThread, Socket socket) {
@@ -31,27 +32,30 @@ public class CommunicationThread extends Thread {
     }
 
     private void readPayload(BufferedReader bufferedReader) {
-        city = null;
-        informationType = null;
+        currency = null;
         try {
-            city = bufferedReader.readLine();
-            informationType = bufferedReader.readLine();
+            currency = bufferedReader.readLine();
+
+            Log.d(Constants.TAG, "[COMMUNICATION THREAD] Received from client: " + currency);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        if (city == null || city.isEmpty() || informationType == null || informationType.isEmpty()) {
+        if (currency == null || currency.isEmpty()) {
             Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error receiving parameters from client (city / information type!");
         }
     }
 
-    private WeatherInformation getResultFromRequest() {
-        WeatherInformation weatherInformation = null;
+    private CurrencyInformation getResultFromRequest() {
+        if (!currency.equals("EUR") && !currency.equals("USD")) {
+            Log.d(Constants.TAG, "[COMMUNICATION THREAD] currency not supported: " + currency);
+        }
+        CurrencyInformation currencyInformation = null;
         HttpURLConnection httpURLConnection = null;
         String error = null;
         try {
-            String webPageAddress = "https://api.openweathermap.org/data/2.5/weather?appid=e03c3b32cfb5a6f7069f2ef29237d87e";
-            webPageAddress += "&q=" + this.city;
+            String webPageAddress = "https://api.coindesk.com/v1/bpi/currentprice/";
+            webPageAddress += this.currency + ".json";
 
             HttpURLConnection connection = (HttpURLConnection) new URL(webPageAddress).openConnection();
             InputStream in = new BufferedInputStream(connection.getInputStream());
@@ -68,70 +72,49 @@ public class CommunicationThread extends Thread {
             // Parse the page source code into a JSONObject and extract the needed information
             JSONObject content = new JSONObject(response);
 
-            Double windSpeed = content.getJSONObject("wind").getDouble("speed");
-            Double temperature = content.getJSONObject("main").getDouble("temp");
-            Double humidity = content.getJSONObject("main").getDouble("humidity");
-            Double pressure = content.getJSONObject("main").getDouble("pressure");
-            // Log.d("test", content.getJSONArray("weather").getString(0));
-            String condition = content.getJSONArray("weather").getJSONObject(0).getString("main");
+            Log.d(Constants.TAG, "ServerThread: " + content.toString());
 
-            weatherInformation = new WeatherInformation(temperature, windSpeed, condition, pressure, humidity);
+            String updated = content.getJSONObject("time").getString("updated");
+            Double rate = content.getJSONObject("bpi").getJSONObject(currency).getDouble("rate_float");
+
+            currencyInformation = new CurrencyInformation(Calendar.getInstance().getTime(), rate, this.currency);
         } catch(IOException e)  {
             Log.e("tag", "Error: " + e.toString());
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
 
-        return weatherInformation;
+        return currencyInformation;
     }
 
     private String getResult() {
+        Date currentTime = Calendar.getInstance().getTime();
+
+        HashMap<String, CurrencyInformation> data = serverThread.getData();
+
+        if (data.containsKey(currency)) {
+            CurrencyInformation information = data.get(currency);
+            // If the information is older than 10 seconds, it is considered expired
+            if (currentTime.getTime() - information.updated.getTime() < 10000) {
+                Log.d(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the cache...");
+                return information.toString();
+            }
+        }
+
+        CurrencyInformation currencyInformation = getResultFromRequest();
+        serverThread.setData(currency, currencyInformation);
+
+        return currencyInformation.toString();
+        /*
         // It checks whether the serverThread has already received the weather forecast information for the given city.
         HashMap<String, WeatherInformation> data = serverThread.getData();
         WeatherInformation weatherInformation;
-        if (data.containsKey(city)) {
-            Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the cache...");
-            weatherInformation = data.get(city);
-        } else {
-            Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the webservice...");
-            weatherInformation = getResultFromRequest();
-            serverThread.setData(city, weatherInformation);
-        }
 
-        if (weatherInformation == null) {
-            Log.e(Constants.TAG, "[COMMUNICATION THREAD] Weather Forecast Information is null!");
-            return null;
-        }
-
-        Log.d(Constants.TAG, "informationType: " + informationType);
-
-        String result = null;
-        switch (informationType) {
-            case "all":
-                result = weatherInformation.toString();
-                break;
-            case "temperature":
-                result = "Temperature: " + weatherInformation.temperature;
-                break;
-            case "wind_speed":
-                result = "Wind speed: " + weatherInformation.windSpeed;
-                break;
-            case "condition":
-                result = "Condition: " + weatherInformation.condition;
-                break;
-            case "humidity":
-                result = "Humidity: " + weatherInformation.humidity;
-                break;
-            case "pressure":
-                result = "Pressure: " + weatherInformation.pressure;
-                break;
-            default:
-                result = "[COMMUNICATION THREAD] Wrong information type (all / temperature / wind_speed / condition / humidity / pressure)!";
-        }
 
         Log.d(Constants.TAG, "[COMMUNICATION THREAD] result: " + result);
 
         return result;
+        */
     }
 
     // run() method: The run method is the entry point for the thread when it starts executing.

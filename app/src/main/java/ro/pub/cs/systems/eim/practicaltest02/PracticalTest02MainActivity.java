@@ -10,6 +10,7 @@ import android.widget.Toast;
 public class PracticalTest02MainActivity extends AppCompatActivity {
 
     ServerThread serverThread = null;
+    Integer port = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,7 +20,7 @@ public class PracticalTest02MainActivity extends AppCompatActivity {
         EditText field1 = findViewById(R.id.serverPort);
 
         findViewById(R.id.button1).setOnClickListener(view -> {
-            Integer port = Integer.parseInt(field1.getText().toString());
+            port = Integer.parseInt(field1.getText().toString());
 
             serverThread = new ServerThread(port);
             serverThread.start();
@@ -28,23 +29,19 @@ public class PracticalTest02MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.button2).setOnClickListener(view -> {
-            /*if (city == null || city.isEmpty()) {
-                Toast.makeText(getApplicationContext(), "City is empty", Toast.LENGTH_LONG).show();
-                return;
-            }
+            String currency = ((EditText) findViewById(R.id.currency)).getText().toString();
 
-            ClientThread thread = new ClientThread("127.0.0.1", 5100, city, informationType, (TextView) findViewById(R.id.text1));
-            thread.start();*/
-            /*
+            ClientThread thread = new ClientThread("127.0.0.1", port, currency, (TextView) findViewById(R.id.text1));
+            thread.start();
+
             try {
                 thread.join();
-                String result = thread.result;
-                TextView textView = (TextView) findViewById(R.id.text1);
-                textView.setText(result);
+                //String result = thread.result;
+                //TextView textView = (TextView) findViewById(R.id.text1);
+                //textView.setText(result);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            */
         });
     }
 }

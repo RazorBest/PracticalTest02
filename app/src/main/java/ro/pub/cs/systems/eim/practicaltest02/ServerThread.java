@@ -11,7 +11,7 @@ public class ServerThread extends Thread {
 
     private ServerSocket serverSocket = null;
 
-    private final HashMap<String, WeatherInformation> data;
+    private final HashMap<String, CurrencyInformation> data;
 
     public ServerThread(int port) {
         try {
@@ -29,11 +29,11 @@ public class ServerThread extends Thread {
         return serverSocket;
     }
 
-    public synchronized void setData(String city, WeatherInformation weatherInformation) {
-        this.data.put(city, weatherInformation);
+    public synchronized void setData(String city, CurrencyInformation currencyInformation) {
+        this.data.put(city, currencyInformation);
     }
 
-    public synchronized HashMap<String, WeatherInformation> getData() {
+    public synchronized HashMap<String, CurrencyInformation> getData() {
         return data;
     }
 

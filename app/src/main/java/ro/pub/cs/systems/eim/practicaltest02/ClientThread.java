@@ -12,18 +12,16 @@ public class ClientThread extends Thread {
 
     private final String address;
     private final int port;
-    private final String city;
-    private final String informationType;
-    private final TextView weatherForecastTextView;
+    private final String currency;
+    private final TextView currencyTextView;
 
     private Socket socket;
 
-    public ClientThread(String address, int port, String city, String informationType, TextView weatherForecastTextView) {
+    public ClientThread(String address, int port, String currency, TextView currencyTextView) {
         this.address = address;
         this.port = port;
-        this.city = city;
-        this.informationType = informationType;
-        this.weatherForecastTextView = weatherForecastTextView;
+        this.currency = currency;
+        this.currencyTextView = currencyTextView;
     }
 
     @Override
@@ -37,9 +35,7 @@ public class ClientThread extends Thread {
             PrintWriter printWriter = Utilities.getWriter(socket);
 
             // sends the city and information type to the server
-            printWriter.println(city);
-            printWriter.flush();
-            printWriter.println(informationType);
+            printWriter.println(currency);
             printWriter.flush();
             String weatherInformation;
 
@@ -53,7 +49,7 @@ public class ClientThread extends Thread {
 
             final String finalizedData = data;
             // updates the UI with the weather information. This is done using postt() method to ensure it is executed on UI thread
-            weatherForecastTextView.post(() -> weatherForecastTextView.setText(finalizedData));
+            currencyTextView.post(() -> currencyTextView.setText(finalizedData));
         } // if an exception occurs, it is logged
         catch (IOException ioException) {
             Log.e(Constants.TAG, "[CLIENT THREAD] An exception has occurred: " + ioException.getMessage());
